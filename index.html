@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Inventarios</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .critical { color: #e74c3c; }
+        .warning { color: #f39c12; }
+        .success { color: #27ae60; }
+        .info { color: #3498db; }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .section h2 {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .product-list {
+            margin-bottom: 20px;
+        }
+
+        .product-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            transition: transform 0.2s ease;
+        }
+
+        .product-item:hover {
+            transform: scale(1.02);
+        }
+
+        .critical-item { background: rgba(231, 76, 60, 0.1); border-left: 4px solid #e74c3c; }
+        .warning-item { background: rgba(243, 156, 18, 0.1); border-left: 4px solid #f39c12; }
+        .success-item { background: rgba(39, 174, 96, 0.1); border-left: 4px solid #27ae60; }
+
+        .product-info {
+            flex: 1;
+        }
+
+        .product-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .product-details {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .product-stock {
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .inventory-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .inventory-table th,
+        .inventory-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .inventory-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .badge-critical { background: #e74c3c; color: white; }
+        .badge-warning { background: #f39c12; color: white; }
+        .badge-success { background: #27ae60; color: white; }
+
+        .action-buttons {
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Header -->
+        <div class="header">
+            <h1>📦 Dashboard de Inventarios</h1>
+            <p>Sistema inteligente de control de stock con alertas automáticas</p>
+        </div>
+
+        <!-- Statistics -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number critical" id="criticalCount">2</div>
+                <div>Productos Críticos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number warning" id="warningCount">2</div>
+                <div>Stock Bajo</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number success" id="normalCount">2</div>
+                <div>Stock Normal</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number info" id="totalValue">$7,362</div>
+                <div>Valor Total</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content-grid">
+            <!-- Alerts -->
+            <div class="section">
+                <h2>🚨 Alertas Prioritarias</h2>
+                
+                <h3 style="color: #e74c3c; margin-bottom: 15px;">🔴 Críticos - Pedir HOY</h3>
+                <div class="product-list" id="criticalProducts">
+                    <div class="product-item critical-item">
+                        <div class="product-info">
+                            <div class="product-name">iPhone 15 Pro 128GB</div>
+                            <div class="product-details">SKU: IPH15P-128-BLK | Apple Distribuidor MX</div>
+                        </div>
+                        <div class="product-stock">
+                            <div style="color: #e74c3c;">3 / 5</div>
+                            <div style="font-size: 0.8em;">Pedir: 17 unidades</div>
+                        </div>
+                    </div>
+                    <div class="product-item critical-item">
+                        <div class="product-info">
+                            <div class="product-name">Crema Facial L'Oréal</div>
+                            <div class="product-details">SKU: LOR-CF-50ML | L'Oréal Distribución</div>
+                        </div>
+                        <div class="product-stock">
+                            <div style="color: #e74c3c;">2 / 8</div>
+                            <div style="font-size: 0.8em;">Pedir: 23 unidades</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 style="color: #f39c12; margin-bottom: 15px;">🟡 Bajos - Planificar Esta Semana</h3>
+                <div class="product-list" id="warningProducts">
+                    <div class="product-item warning-item">
+                        <div class="product-info">
+                            <div class="product-name">Auriculares Sony WH-1000XM5</div>
+                            <div class="product-details">SKU: SNY-WH1000XM5-BLK | Sony México</div>
+                        </div>
+                        <div class="product-stock">
+                            <div style="color: #f39c12;">8 / 10</div>
+                            <div style="font-size: 0.8em;">Pedir: 22 unidades</div>
+                        </div>
+                    </div>
+                    <div class="product-item warning-item">
+                        <div class="product-info">
+                            <div class="product-name">Jeans Levi's 501 Talla 32</div>
+                            <div class="product-details">SKU: LVS-501-32-IND | Levi's México</div>
+                        </div>
+                        <div class="product-stock">
+                            <div style="color: #f39c12;">6 / 8</div>
+                            <div style="font-size: 0.8em;">Pedir: 18 unidades</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="section">
+                <h2>📊 Análisis de Inventario</h2>
+                <div class="chart-container">
+                    <canvas id="inventoryChart"></canvas>
+                </div>
+                
+                <h3 style="margin-top: 30px; margin-bottom: 15px;">💰 Cálculo de Reabastecimiento</h3>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span><strong>Productos Críticos:</strong></span>
+                        <span style="color: #e74c3c;"><strong>$15,570.50</strong></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span><strong>Productos Bajos:</strong></span>
+                        <span style="color: #f39c12;"><strong>$6,790.00</strong></span>
+                    </div>
+                    <hr style="margin: 10px 0;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span><strong>Total a Invertir:</strong></span>
+                        <span style="color: #2c3e50; font-size: 1.2em;"><strong>$22,360.50</strong></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Full Inventory Table -->
+        <div class="section">
+            <h2>📋 Inventario Completo</h2>
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="openAddProductModal()">➕ Agregar Producto</button>
+                <button class="btn btn-primary" onclick="exportData()">📤 Exportar Datos</button>
+                <button class="btn btn-primary" onclick="generateReport()">📊 Generar Reporte</button>
+            </div>
+            
+            <table class="inventory-table" id="inventoryTable">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Categoría</th>
+                        <th>Stock</th>
+                        <th>Estado</th>
+                        <th>Precio Compra</th>
+                        <th>Precio Venta</th>
+                        <th>Valor Total</th>
+                        <th>Proveedor</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryTableBody">
+                    <!-- Data will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add Product Modal -->
+    <div id="addProductModal" class="modal">
+        <div class="modal-content">
+            <h2>➕ Agregar Nuevo Producto</h2>
+            <form id="addProductForm">
+                <div class="form-group">
+                    <label>Nombre del Producto</label>
+                    <input type="text" id="productName" required>
+                </div>
+                <div class="form-group">
+                    <label>Código SKU</label>
+                    <input type="text" id="productSKU" required>
+                </div>
+                <div class="form-group">
+                    <label>Categoría</label>
+                    <select id="productCategory" required>
+                        <option value="">Seleccionar...</option>
+                        <option value="Electrónicos">Electrónicos</option>
+                        <option value="Ropa">Ropa</option>
+                        <option value="Hogar">Hogar</option>
+                        <option value="Deportes">Deportes</option>
+                        <option value="Belleza">Belleza</option>
+                        <option value="Otros">Otros</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Stock Actual</label>
+                    <input type="number" id="currentStock" required>
+                </div>
+                <div class="form-group">
+                    <label>Stock Mínimo</label>
+                    <input type="number" id="minStock" required>
+                </div>
+                <div class="form-group">
+                    <label>Stock Máximo</label>
+                    <input type="number" id="maxStock" required>
+                </div>
+                <div class="form-group">
+                    <label>Precio de Compra</label>
+                    <input type="number" step="0.01" id="buyPrice" required>
+                </div>
+                <div class="form-group">
+                    <label>Precio de Venta</label>
+                    <input type="number" step="0.01" id="sellPrice" required>
+                </div>
+                <div class="form-group">
+                    <label>Proveedor</label>
+                    <input type="text" id="supplier" required>
+                </div>
+                <div class="form-group">
+                    <label>Ubicación</label>
+                    <input type="text" id="location">
+                </div>
+                
+                <div style="text-align: right; margin-top: 30px;">
+                    <button type="button" class="btn" onclick="closeAddProductModal()" style="background: #6c757d; color: white;">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Producto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Sample inventory data
+        let inventory = [
+            {
+                name: "iPhone 15 Pro 128GB",
+                sku: "IPH15P-128-BLK",
+                category: "Electrónicos",
+                currentStock: 3,
+                minStock: 5,
+                maxStock: 20,
+                buyPrice: 899,
+                sellPrice: 1199,
+                supplier: "Apple Distribuidor MX",
+                location: "Estante A1-Superior"
+            },
+            {
+                name: "Auriculares Sony WH-1000XM5",
+                sku: "SNY-WH1000XM5-BLK",
+                category: "Electrónicos",
+                currentStock: 8,
+                minStock: 10,
+                maxStock: 30,
+                buyPrice: 280,
+                sellPrice: 399,
+                supplier: "Sony México",
+                location: "Estante A2-Medio"
+            },
+            {
+                name: "Camiseta Nike Dri-FIT",
+                sku: "NKE-DFIT-001-M",
+                category: "Deportes",
+                currentStock: 25,
+                minStock: 15,
+                maxStock: 50,
+                buyPrice: 18,
+                sellPrice: 35,
+                supplier: "Nike Wholesale",
+                location: "Bodega B3-Ropa"
+            },
+            {
+                name: "Crema Facial L'Oréal",
+                sku: "LOR-CF-50ML",
+                category: "Belleza",
+                currentStock: 2,
+                minStock: 8,
+                maxStock: 25,
+                buyPrice: 12.5,
+                sellPrice: 24.99,
+                supplier: "L'Oréal Distribución",
+                location: "Vitrina C1"
+            },
+            {
+                name: "Cafetera Nespresso Vertuo",
+                sku: "NSP-VRT-002",
+                category: "Hogar",
+                currentStock: 12,
+                minStock: 8,
+                maxStock: 20,
+                buyPrice: 145,
+                sellPrice: 219,
+                supplier: "Nespresso México",
+                location: "Almacén Principal A5"
+            },
+            {
+                name: "Jeans Levi's 501 Talla 32",
+                sku: "LVS-501-32-IND",
+                category: "Ropa",
+                currentStock: 6,
+                minStock: 8,
+                maxStock: 24,
+                buyPrice: 35,
+                sellPrice: 79.99,
+                supplier: "Levi's México",
+                location: "Perchero B2"
+            }
+        ];
+
+        function getStockStatus(current, min) {
+            if (current <= min) return 'critical';
+            if (current <= min * 1.5) return 'warning';
+            return 'normal';
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                critical: '<span class="status-badge badge-critical">🔴 CRÍTICO</span>',
+                warning: '<span class="status-badge badge-warning">🟡 BAJO</span>',
+                normal: '<span class="status-badge badge-success">🟢 NORMAL</span>'
+            };
+            return badges[status];
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('es-MX', {
+                style: 'currency',
+                currency: 'USD'
+            }).format(amount);
+        }
+
+        function updateStats() {
+            let critical = 0, warning = 0, normal = 0, totalValue = 0;
+            
+            inventory.forEach(item => {
+                const status = getStockStatus(item.currentStock, item.minStock);
+                if (status === 'critical') critical++;
+                else if (status === 'warning') warning++;
+                else normal++;
+                
+                totalValue += item.currentStock * item.buyPrice;
+            });
+            
+            document.getElementById('criticalCount').textContent = critical;
+            document.getElementById('warningCount').textContent = warning;
+            document.getElementById('normalCount').textContent = normal;
+            document.getElementById('totalValue').textContent = formatCurrency(totalValue);
+        }
+
+        function populateInventoryTable() {
+            const tbody = document.getElementById('inventoryTableBody');
+            tbody.innerHTML = '';
+            
+            inventory.forEach(item => {
+                const status = getStockStatus(item.currentStock, item.minStock);
+                const totalValue = item.currentStock * item.buyPrice;
+                
+                const row = `
+                    <tr>
+                        <td><strong>${item.name}</strong><br><small>SKU: ${item.sku}</small></td>
+                        <td>${item.category}</td>
+                        <td>${item.currentStock} / ${item.minStock}</td>
+                        <td>${getStatusBadge(status)}</td>
+                        <td>${formatCurrency(item.buyPrice)}</td>
+                        <td>${formatCurrency(item.sellPrice)}</td>
+                        <td>${formatCurrency(totalValue)}</td>
+                        <td>${item.supplier}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function createChart() {
+            const ctx = document.getElementById('inventoryChart').getContext('2d');
+            
+            const categories = [...new Set(inventory.map(item => item.category))];
+            const categoryData = categories.map(cat => {
+                return inventory
+                    .filter(item => item.category === cat)
+                    .reduce((sum, item) => sum + (item.currentStock * item.buyPrice), 0);
+            });
+            
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: categories,
+                    datasets: [{
+                        data: categoryData,
+                        backgroundColor: [
+                            '#3498db',
+                            '#27ae60',
+                            '#f39c12',
+                            '#e74c3c',
+                            '#9b59b6',
+                            '#95a5a6'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Distribución de Valor por Categoría'
+                        }
+                    }
+                }
+            });
+        }
+
+        function openAddProductModal() {
+            document.getElementById('addProductModal').style.display = 'block';
+        }
+
+        function closeAddProductModal() {
+            document.getElementById('addProductModal').style.display = 'none';
+            document.getElementById('addProductForm').reset();
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(inventory, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'inventario.json';
+            link.click();
+        }
+
+        function generateReport() {
+            alert('Función de reportes en desarrollo. Aquí se generaría un PDF con el análisis completo del inventario.');
+        }
+
+        // Form submission
+        document.getElementById('addProductForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const newProduct = {
+                name: document.getElementById('productName').value,
+                sku: document.getElementById('productSKU').value,
+                category: document.getElementById('productCategory').value,
+                currentStock: parseInt(document.getElementById('currentStock').value),
+                minStock: parseInt(document.getElementById('minStock').value),
+                maxStock: parseInt(document.getElementById('maxStock').value),
+                buyPrice: parseFloat(document.getElementById('buyPrice').value),
+                sellPrice: parseFloat(document.getElementById('sellPrice').value),
+                supplier: document.getElementById('supplier').value,
+                location: document.getElementById('location').value
+            };
+            
+            inventory.push(newProduct);
+            updateStats();
+            populateInventoryTable();
+            closeAddProductModal();
+            
+            alert('¡Producto agregado exitosamente!');
+        });
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('addProductModal');
+            if (event.target === modal) {
+                closeAddProductModal();
+            }
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStats();
+            populateInventoryTable();
+            createChart();
+        });
+    </script>
+</body>
+</html>
