@@ -264,7 +264,16 @@
         <!-- Header -->
         <div class="header">
             <h1>📦 Dashboard de Inventarios</h1>
-            <p>Sistema inteligente de control de stock con alertas automáticas</p>
+            <p>Sistema inteligente de control de stock con sincronización automática desde Google Sheets</p>
+            <div style="margin-top: 15px; padding: 10px; background: rgba(39, 174, 96, 0.1); border-radius: 8px; border-left: 4px solid #27ae60;">
+                <strong>✅ Conectado a Google Sheets:</strong> 
+                <a href="https://docs.google.com/spreadsheets/d/14A7s3X1SYBsu1XATk2cTg9XtTE-t0gWm9CtTXv4l83M" target="_blank" style="color: #27ae60; text-decoration: none;">
+                    📊 Ver/Editar Hoja de Inventario
+                </a>
+                <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                    <span id="lastSync">Última sincronización: Cargando...</span>
+                </div>
+            </div>
         </div>
 
         <!-- Statistics -->
@@ -463,12 +472,12 @@
     <script>
         // Configuración de Google Sheets
         const GOOGLE_SHEETS_CONFIG = {
-            // Reemplaza con tu ID de Google Sheets (se obtiene de la URL)
-            SHEET_ID: '14A7s3X1SYBsu1XATk2cTg9XtTE-t0gWm9CtTXv4l83MI',
-            // Nombre de la hoja/pestaña (por defecto "Hoja 1")
+            // Tu Google Sheets ID
+            SHEET_ID: '14A7s3X1SYBsu1XATk2cTg9XtTE-t0gWm9CtTXv4l83M',
+            // Nombre de tu hoja
             SHEET_NAME: 'Inventario',
             // Rango de datos (A1:K100 significa columnas A a K, filas 1 a 100)
-            RANGE: 'A1:K1000'
+            RANGE: 'A1:K100'
         };
 
         // URL para acceder a Google Sheets como CSV
@@ -482,6 +491,9 @@
         // Función para cargar datos desde Google Sheets
         async function loadInventoryFromSheets() {
             try {
+                // Mostrar estado de carga
+                document.getElementById('lastSync').textContent = 'Sincronizando...';
+                
                 const response = await fetch(getGoogleSheetsURL());
                 const csvText = await response.text();
                 
@@ -515,10 +527,12 @@
                 }
                 
                 console.log(`✅ Cargados ${inventory.length} productos desde Google Sheets`);
+                document.getElementById('lastSync').textContent = `Última sincronización: ${new Date().toLocaleString('es-MX')} - ${inventory.length} productos cargados`;
                 updateDashboard();
                 
             } catch (error) {
                 console.error('❌ Error cargando desde Google Sheets:', error);
+                document.getElementById('lastSync').textContent = `❌ Error de conexión - Usando datos de ejemplo`;
                 // Cargar datos de ejemplo si falla la conexión
                 loadSampleData();
             }
