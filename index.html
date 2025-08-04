@@ -291,7 +291,7 @@
                 <div>Stock Normal</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number info" id="totalValue">$7,362</div>
+                <div class="stat-number info" id="totalValue">$0.00 MXN</div>
                 <div>Valor Total</div>
             </div>
         </div>
@@ -326,19 +326,19 @@
                 </div>
                 
                 <h3 style="margin-top: 30px; margin-bottom: 15px;">💰 Cálculo de Reabastecimiento</h3>
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px;">
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px;" id="reorderCalculation">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                         <span><strong>Productos Críticos:</strong></span>
-                        <span style="color: #e74c3c;"><strong>$15,570.50</strong></span>
+                        <span style="color: #e74c3c;" id="criticalCost"><strong>$0.00 MXN</strong></span>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                         <span><strong>Productos Bajos:</strong></span>
-                        <span style="color: #f39c12;"><strong>$6,790.00</strong></span>
+                        <span style="color: #f39c12;" id="warningCost"><strong>$0.00 MXN</strong></span>
                     </div>
                     <hr style="margin: 10px 0;">
                     <div style="display: flex; justify-content: space-between;">
                         <span><strong>Total a Invertir:</strong></span>
-                        <span style="color: #2c3e50; font-size: 1.2em;"><strong>$22,360.50</strong></span>
+                        <span style="color: #2c3e50; font-size: 1.2em;" id="totalReorderCost"><strong>$0.00 MXN</strong></span>
                     </div>
                 </div>
             </div>
@@ -499,18 +499,28 @@
         function formatCurrency(amount) {
             return new Intl.NumberFormat('es-MX', {
                 style: 'currency',
-                currency: 'USD'
+                currency: 'MXN'
             }).format(amount);
         }
 
         function updateStats() {
             let critical = 0, warning = 0, normal = 0, totalValue = 0;
+            let criticalCost = 0, warningCost = 0;
             
             inventory.forEach(item => {
                 const status = getStockStatus(item.currentStock, item.minStock);
-                if (status === 'critical') critical++;
-                else if (status === 'warning') warning++;
-                else normal++;
+                const toOrder = Math.max(0, item.maxStock - item.currentStock);
+                const orderCost = toOrder * item.buyPrice;
+                
+                if (status === 'critical') {
+                    critical++;
+                    criticalCost += orderCost;
+                } else if (status === 'warning') {
+                    warning++;
+                    warningCost += orderCost;
+                } else {
+                    normal++;
+                }
                 
                 totalValue += item.currentStock * item.buyPrice;
             });
@@ -519,6 +529,11 @@
             document.getElementById('warningCount').textContent = warning;
             document.getElementById('normalCount').textContent = normal;
             document.getElementById('totalValue').textContent = formatCurrency(totalValue);
+            
+            // Actualizar costos de reabastecimiento
+            document.getElementById('criticalCost').innerHTML = `<strong>${formatCurrency(criticalCost)}</strong>`;
+            document.getElementById('warningCost').innerHTML = `<strong>${formatCurrency(warningCost)}</strong>`;
+            document.getElementById('totalReorderCost').innerHTML = `<strong>${formatCurrency(criticalCost + warningCost)}</strong>`;
             
             // Actualizar alertas dinámicamente
             updateAlertSections();
