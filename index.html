@@ -381,7 +381,8 @@
         <div class="section">
             <h2>📋 Inventario Completo</h2>
             <div class="action-buttons">
-                <button class="btn btn-primary" onclick="loadInventoryFromSheets()">🔄 Sincronizar con Google Sheets</button>
+                <button class="btn btn-primary" onclick="loadInventoryFromSheets()">🔄 Sincronizar Ahora</button>
+                <button class="btn btn-primary" onclick="toggleAutoSync()">⚡ <span id="autoSyncText">Activar Auto-Sync</span></button>
                 <button class="btn btn-primary" onclick="openAddProductModal()">➕ Agregar Producto</button>
                 <button class="btn btn-primary" onclick="exportData()">📤 Exportar Datos</button>
                 <button class="btn btn-primary" onclick="generateReport()">📊 Generar Reporte</button>
@@ -532,96 +533,39 @@
                 
             } catch (error) {
                 console.error('❌ Error cargando desde Google Sheets:', error);
-                document.getElementById('lastSync').textContent = `❌ Error de conexión - Usando datos de ejemplo`;
-                // Cargar datos de ejemplo si falla la conexión
-                loadSampleData();
+                document.getElementById('lastSync').textContent = `❌ Error de conexión. Verifica que tu Google Sheets esté público.`;
+                
+                // Mostrar mensaje de error en lugar de datos de ejemplo
+                inventory = [];
+                updateDashboard();
+                
+                // Mostrar alerta al usuario
+                alert('⚠️ No se pudieron cargar los datos desde Google Sheets.\n\nVerifica que:\n1. Tu hoja esté configurada como pública\n2. Tengas datos en la hoja "Inventario"\n3. Los headers estén en la fila 1');
             }
         }
 
-        // Datos de ejemplo (como respaldo)
-        function loadSampleData() {
-            inventory = [
-                {
-                    name: "iPhone 15 Pro 128GB",
-                    sku: "IPH15P-128-BLK",
-                    category: "Electrónicos",
-                    currentStock: 3,
-                    minStock: 5,
-                    maxStock: 20,
-                    buyPrice: 899,
-                    sellPrice: 1199,
-                    supplier: "Apple Distribuidor MX",
-                    location: "Estante A1-Superior",
-                    notes: "Producto de alta demanda"
-                },
-                {
-                    name: "Auriculares Sony WH-1000XM5",
-                    sku: "SNY-WH1000XM5-BLK",
-                    category: "Electrónicos",
-                    currentStock: 8,
-                    minStock: 10,
-                    maxStock: 30,
-                    buyPrice: 280,
-                    sellPrice: 399,
-                    supplier: "Sony México",
-                    location: "Estante A2-Medio",
-                    notes: "Promoción activa"
-                },
-                {
-                    name: "Camiseta Nike Dri-FIT",
-                    sku: "NKE-DFIT-001-M",
-                    category: "Deportes",
-                    currentStock: 25,
-                    minStock: 15,
-                    maxStock: 50,
-                    buyPrice: 18,
-                    sellPrice: 35,
-                    supplier: "Nike Wholesale",
-                    location: "Bodega B3-Ropa",
-                    notes: "Talla M más vendida"
-                },
-                {
-                    name: "Crema Facial L'Oréal",
-                    sku: "LOR-CF-50ML",
-                    category: "Belleza",
-                    currentStock: 2,
-                    minStock: 8,
-                    maxStock: 25,
-                    buyPrice: 12.5,
-                    sellPrice: 24.99,
-                    supplier: "L'Oréal Distribución",
-                    location: "Vitrina C1",
-                    notes: "URGENTE: Pedir inmediatamente"
-                },
-                {
-                    name: "Cafetera Nespresso Vertuo",
-                    sku: "NSP-VRT-002",
-                    category: "Hogar",
-                    currentStock: 12,
-                    minStock: 8,
-                    maxStock: 20,
-                    buyPrice: 145,
-                    sellPrice: 219,
-                    supplier: "Nespresso México",
-                    location: "Almacén Principal A5",
-                    notes: "Producto estacional"
-                },
-                {
-                    name: "Jeans Levi's 501 Talla 32",
-                    sku: "LVS-501-32-IND",
-                    category: "Ropa",
-                    currentStock: 6,
-                    minStock: 8,
-                    maxStock: 24,
-                    buyPrice: 35,
-                    sellPrice: 79.99,
-                    supplier: "Levi's México",
-                    location: "Perchero B2",
-                    notes: "Talla popular"
-                }
-            ];
-            console.log('📝 Usando datos de ejemplo');
-            updateDashboard();
+        // Eliminar función de datos de ejemplo
+        // function loadSampleData() - ELIMINADA
+
+        // Variables para auto-sincronización
+        let autoSyncInterval = null;
+        let isAutoSyncEnabled = false;
+
+        // Función para alternar auto-sincronización
+        function toggleAutoSync() {
+            if (isAutoSyncEnabled) {
+                // Desactivar auto-sync
+                clearInterval(autoSyncInterval);
+                isAutoSyncEnabled = false;
+                document.getElementById('autoSyncText').textContent = 'Activar Auto-Sync';
+                document.getElementById('lastSync').innerHTML += ' | Auto-sync: <span style="color: #e74c3c;">Desactivado</span>';
+            } else {
+                // Activar auto-sync cada 5 minutos
+                autoSyncInterval = setInterval(loadInventoryFromSheets, 300000); // 5 minutos = 300000ms
+                isAutoSyncEnabled = true;
+                document.getElementById('autoSyncText').textContent = 'Desactivar Auto-Sync';
+                document.getElementById('lastSync').innerHTML += ' | Auto-sync: <span style="color: #27ae60;">Cada 5 min</span>';
+            }
         }
 
         // Función para actualizar todo el dashboard
