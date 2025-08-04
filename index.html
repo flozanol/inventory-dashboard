@@ -372,6 +372,7 @@
         <div class="section">
             <h2>📋 Inventario Completo</h2>
             <div class="action-buttons">
+                <button class="btn btn-primary" onclick="loadInventoryFromSheets()">🔄 Sincronizar con Google Sheets</button>
                 <button class="btn btn-primary" onclick="openAddProductModal()">➕ Agregar Producto</button>
                 <button class="btn btn-primary" onclick="exportData()">📤 Exportar Datos</button>
                 <button class="btn btn-primary" onclick="generateReport()">📊 Generar Reporte</button>
@@ -460,81 +461,161 @@
     </div>
 
     <script>
-        // Sample inventory data
-        let inventory = [
-            {
-                name: "iPhone 15 Pro 128GB",
-                sku: "IPH15P-128-BLK",
-                category: "Electrónicos",
-                currentStock: 3,
-                minStock: 5,
-                maxStock: 20,
-                buyPrice: 899,
-                sellPrice: 1199,
-                supplier: "Apple Distribuidor MX",
-                location: "Estante A1-Superior"
-            },
-            {
-                name: "Auriculares Sony WH-1000XM5",
-                sku: "SNY-WH1000XM5-BLK",
-                category: "Electrónicos",
-                currentStock: 8,
-                minStock: 10,
-                maxStock: 30,
-                buyPrice: 280,
-                sellPrice: 399,
-                supplier: "Sony México",
-                location: "Estante A2-Medio"
-            },
-            {
-                name: "Camiseta Nike Dri-FIT",
-                sku: "NKE-DFIT-001-M",
-                category: "Deportes",
-                currentStock: 25,
-                minStock: 15,
-                maxStock: 50,
-                buyPrice: 18,
-                sellPrice: 35,
-                supplier: "Nike Wholesale",
-                location: "Bodega B3-Ropa"
-            },
-            {
-                name: "Crema Facial L'Oréal",
-                sku: "LOR-CF-50ML",
-                category: "Belleza",
-                currentStock: 2,
-                minStock: 8,
-                maxStock: 25,
-                buyPrice: 12.5,
-                sellPrice: 24.99,
-                supplier: "L'Oréal Distribución",
-                location: "Vitrina C1"
-            },
-            {
-                name: "Cafetera Nespresso Vertuo",
-                sku: "NSP-VRT-002",
-                category: "Hogar",
-                currentStock: 12,
-                minStock: 8,
-                maxStock: 20,
-                buyPrice: 145,
-                sellPrice: 219,
-                supplier: "Nespresso México",
-                location: "Almacén Principal A5"
-            },
-            {
-                name: "Jeans Levi's 501 Talla 32",
-                sku: "LVS-501-32-IND",
-                category: "Ropa",
-                currentStock: 6,
-                minStock: 8,
-                maxStock: 24,
-                buyPrice: 35,
-                sellPrice: 79.99,
-                supplier: "Levi's México",
-                location: "Perchero B2"
+        // Configuración de Google Sheets
+        const GOOGLE_SHEETS_CONFIG = {
+            // Reemplaza con tu ID de Google Sheets (se obtiene de la URL)
+            SHEET_ID: '14A7s3X1SYBsu1XATk2cTg9XtTE-t0gWm9CtTXv4l83MI',
+            // Nombre de la hoja/pestaña (por defecto "Hoja 1")
+            SHEET_NAME: 'Inventario',
+            // Rango de datos (A1:K100 significa columnas A a K, filas 1 a 100)
+            RANGE: 'A1:K1000'
+        };
+
+        // URL para acceder a Google Sheets como CSV
+        function getGoogleSheetsURL() {
+            return `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_CONFIG.SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${GOOGLE_SHEETS_CONFIG.SHEET_NAME}&range=${GOOGLE_SHEETS_CONFIG.RANGE}`;
+        }
+
+        // Variable global para almacenar inventario
+        let inventory = [];
+
+        // Función para cargar datos desde Google Sheets
+        async function loadInventoryFromSheets() {
+            try {
+                const response = await fetch(getGoogleSheetsURL());
+                const csvText = await response.text();
+                
+                // Parsear CSV
+                const lines = csvText.split('\n');
+                const headers = lines[0].split(',').map(header => header.replace(/"/g, '').trim());
+                
+                inventory = [];
+                
+                for (let i = 1; i < lines.length; i++) {
+                    if (lines[i].trim() === '') continue;
+                    
+                    const values = lines[i].split(',').map(value => value.replace(/"/g, '').trim());
+                    
+                    if (values.length >= 10 && values[0]) { // Verificar que hay datos
+                        const product = {
+                            name: values[0] || '',
+                            sku: values[1] || '',
+                            category: values[2] || '',
+                            currentStock: parseInt(values[3]) || 0,
+                            minStock: parseInt(values[4]) || 0,
+                            maxStock: parseInt(values[5]) || 0,
+                            buyPrice: parseFloat(values[6]) || 0,
+                            sellPrice: parseFloat(values[7]) || 0,
+                            supplier: values[8] || '',
+                            location: values[9] || '',
+                            notes: values[10] || ''
+                        };
+                        inventory.push(product);
+                    }
+                }
+                
+                console.log(`✅ Cargados ${inventory.length} productos desde Google Sheets`);
+                updateDashboard();
+                
+            } catch (error) {
+                console.error('❌ Error cargando desde Google Sheets:', error);
+                // Cargar datos de ejemplo si falla la conexión
+                loadSampleData();
             }
-        ];
+        }
+
+        // Datos de ejemplo (como respaldo)
+        function loadSampleData() {
+            inventory = [
+                {
+                    name: "iPhone 15 Pro 128GB",
+                    sku: "IPH15P-128-BLK",
+                    category: "Electrónicos",
+                    currentStock: 3,
+                    minStock: 5,
+                    maxStock: 20,
+                    buyPrice: 899,
+                    sellPrice: 1199,
+                    supplier: "Apple Distribuidor MX",
+                    location: "Estante A1-Superior",
+                    notes: "Producto de alta demanda"
+                },
+                {
+                    name: "Auriculares Sony WH-1000XM5",
+                    sku: "SNY-WH1000XM5-BLK",
+                    category: "Electrónicos",
+                    currentStock: 8,
+                    minStock: 10,
+                    maxStock: 30,
+                    buyPrice: 280,
+                    sellPrice: 399,
+                    supplier: "Sony México",
+                    location: "Estante A2-Medio",
+                    notes: "Promoción activa"
+                },
+                {
+                    name: "Camiseta Nike Dri-FIT",
+                    sku: "NKE-DFIT-001-M",
+                    category: "Deportes",
+                    currentStock: 25,
+                    minStock: 15,
+                    maxStock: 50,
+                    buyPrice: 18,
+                    sellPrice: 35,
+                    supplier: "Nike Wholesale",
+                    location: "Bodega B3-Ropa",
+                    notes: "Talla M más vendida"
+                },
+                {
+                    name: "Crema Facial L'Oréal",
+                    sku: "LOR-CF-50ML",
+                    category: "Belleza",
+                    currentStock: 2,
+                    minStock: 8,
+                    maxStock: 25,
+                    buyPrice: 12.5,
+                    sellPrice: 24.99,
+                    supplier: "L'Oréal Distribución",
+                    location: "Vitrina C1",
+                    notes: "URGENTE: Pedir inmediatamente"
+                },
+                {
+                    name: "Cafetera Nespresso Vertuo",
+                    sku: "NSP-VRT-002",
+                    category: "Hogar",
+                    currentStock: 12,
+                    minStock: 8,
+                    maxStock: 20,
+                    buyPrice: 145,
+                    sellPrice: 219,
+                    supplier: "Nespresso México",
+                    location: "Almacén Principal A5",
+                    notes: "Producto estacional"
+                },
+                {
+                    name: "Jeans Levi's 501 Talla 32",
+                    sku: "LVS-501-32-IND",
+                    category: "Ropa",
+                    currentStock: 6,
+                    minStock: 8,
+                    maxStock: 24,
+                    buyPrice: 35,
+                    sellPrice: 79.99,
+                    supplier: "Levi's México",
+                    location: "Perchero B2",
+                    notes: "Talla popular"
+                }
+            ];
+            console.log('📝 Usando datos de ejemplo');
+            updateDashboard();
+        }
+
+        // Función para actualizar todo el dashboard
+        function updateDashboard() {
+            updateStats();
+            populateInventoryTable();
+            if (typeof createChart === 'function') createChart();
+        }
 
         function getStockStatus(current, min) {
             if (current <= min) return 'critical';
@@ -700,9 +781,8 @@
 
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {
-            updateStats();
-            populateInventoryTable();
-            createChart();
+            // Intentar cargar desde Google Sheets primero
+            loadInventoryFromSheets();
         });
     </script>
 </body>
